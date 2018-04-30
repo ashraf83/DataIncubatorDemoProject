@@ -1,0 +1,71 @@
+udpr = dsp.UDPReceiver('LocalIPPort',25001);
+udps = dsp.UDPSender('RemoteIPPort',12401,'RemoteIPAddress','192.168.153.40','LocalIPPortSource','Property','LocalIPPort',25001);
+setup(udpr); 
+
+bytesSent = 0;
+test1 = 0;
+%bytesReceived = 0;
+%dataLength = 128;
+%dataReceived=0;
+dataReceived=udpr();
+while isempty(dataReceived)
+    dataReceived=udpr();
+    pause(1);
+    fprintf('Listining...... %d\n', length(dataReceived));
+end
+A=zeros(501,1);
+while  isequal(test1,0)
+simOut = sim( 'udpsendreceiveTest111', 'SaveOutput', 'on' );
+a = simOut.get( 'simout2' );
+A=[A a];
+c=processingfcn(a);
+
+
+if c(2)<400
+       fprintf('condition not met .... %d\n', c);
+       test1=0;
+else
+test1=1;
+end
+end
+fprintf('condition met, we need to notify c#....   %d\n', length(dataReceived));
+udps(uint8('01'));
+fprintf('sent c#....   %d\n', '01');
+dataReceived2=udpr();
+while isempty(dataReceived2)
+    dataReceived2=udpr();
+    udps(uint8('01'));
+    fprintf('sent again c#....   %d\n',uint8('01'));
+    pause(1);
+    fprintf('Listining again...... %d\n', length(dataReceived2));
+end
+
+
+for k = 1:20
+  % dataSent = uint8(255*rand(1,dataLength));
+  % bytesSent = bytesSent + dataLength;
+   udps(uint8('10'));
+   pause(1);
+   dataReceived = udpr();
+   fprintf('data recieved:     %d\n', length(dataReceived));
+  % bytesReceived = bytesReceived + length(dataReceived);
+end
+
+release(udps);
+release(udpr);
+
+
+%%%%%%%%%%%%%%%%%%%%%Processing function definition%%%%%%%%%%%%%%
+
+function [outputArg1,outputArg2] = processingfcn(inputArg1)
+%UNTITLED Summary of this function goes here
+%Detailed explanation goes here
+Ain = inputArg1/1000;
+Bin=unique(Ain,'stable');
+Cin=histfit(Bin,15,'normal');
+
+outputArg1=Cin(2);
+%outputArg2=mean(prob.NormalDistribution(Cin(2));
+outputArg2=mean(Cin(2).YData);
+
+end
